@@ -27,9 +27,10 @@ class Game(Simulation):
     def __init__(self, players, rules=None, verbosity=0, client_adapter_cls=None):
         super(Game, self).__init__(players, verbosity)
         self.client_adapter = client_adapter_cls(self)
-        self.team_players = []
-        self.team_players.append([x for x in players if x.team_side == TeamSide.HOME])
-        self.team_players.append([x for x in players if x.team_side == TeamSide.AWAY])
+        self.team_players = [
+            [x for x in players if x.team_side == TeamSide.HOME],
+            [x for x in players if x.team_side == TeamSide.AWAY],
+        ]
         if rules is None:
             rules = STANDARD_GAME_RULES
         self.rules = rules
@@ -100,7 +101,8 @@ class Game(Simulation):
 
     def SetGamePhase(self, new_phase, verbosity=0):
         old_phase = self.GetGamePhase()
-        if verbosity: print('%s -> %s' % (old_phase, new_phase))
+        if verbosity:
+            print(f'{old_phase} -> {new_phase}')
         self.state.SetField(GameState.PREVIOUS_PHASE, old_phase)
         self.state.SetField(GameState.CURRENT_PHASE, new_phase)
 
@@ -145,25 +147,14 @@ class Game(Simulation):
         elif self.GetGamePhase() == GamePhase.STOPPAGE_TIMEUP:
             self.SetGamePhase(GamePhase.GAME_OVER, verbosity)
             self.PhaseUpdate(verbosity)
-        elif self.GetGamePhase() == GamePhase.GAME_OVER:
-            pass
-        else:
+        elif self.GetGamePhase() != GamePhase.GAME_OVER:
             raise TypeError('unknown game phase', self.GetGamePhase())
 
     def InputToPolicyVectorIndex(self, attack_dir, input):
         # compensate so policy space is normalized to attack dir
         input *= attack_dir
         input = numpy.sign(input)
-        pvi = int((input[0] + 1) * 3 + input[1] + 1)
-        # print("input", input, "policy vector index", pvi)
-
-        # input 0 0 is 4 (no input)
-        # input 0 1 is 5 (up)
-        # input -1 1 is 2 (up right)
-        # input -1 0 is 1
-        # input 1 -1 is 6 (down left)
-
-        return pvi
+        return int((input[0] + 1) * 3 + input[1] + 1)
 
     def PolicyVectorIndexToInput(self, attack_dir, ls_index):
         # should be the reverse of the above
@@ -284,27 +275,26 @@ class Game(Simulation):
                     GameEvent(self.tick, STS2Event.SHOT_BLOCK, interceptor.name, player.name))
                 self.control.GiveControl(interceptor)
                 interceptor.ResponseTime(self, self.rules.receive_response_time)
+            elif on_net:
+                self.AwardGoal(player)
+                self.control.Reset(self)
             else:
-                if on_net:
-                    self.AwardGoal(player)
-                    self.control.Reset(self)
-                else:
-                    self.game_event_history.AddEvent(
-                        GameEvent(self.tick, STS2Event.MISSED_SHOT, player.name, ''))
+                self.game_event_history.AddEvent(
+                    GameEvent(self.tick, STS2Event.MISSED_SHOT, player.name, ''))
 
-                    # give possession to closest player
-                    attacking_net_pos = player.GetAttackingNetPos(self)
-                    min_dist = None
-                    rebound_player = None
-                    for player in self.players:
-                        # project player onto trajectory to find unconstrained intercept point
-                        dist = numpy.linalg.norm(player.GetPosition(self) - attacking_net_pos)
-                        if min_dist is None or dist < min_dist:
-                            min_dist = dist
-                            rebound_player = player
+                # give possession to closest player
+                attacking_net_pos = player.GetAttackingNetPos(self)
+                min_dist = None
+                rebound_player = None
+                for player in self.players:
+                    # project player onto trajectory to find unconstrained intercept point
+                    dist = numpy.linalg.norm(player.GetPosition(self) - attacking_net_pos)
+                    if min_dist is None or dist < min_dist:
+                        min_dist = dist
+                        rebound_player = player
 
-                    self.control.GiveControl(rebound_player)
-                    rebound_player.ResponseTime(self, self.rules.receive_response_time)
+                self.control.GiveControl(rebound_player)
+                rebound_player.ResponseTime(self, self.rules.receive_response_time)
 
         return through_chance * on_net_chance
 
@@ -358,8 +348,7 @@ class Game(Simulation):
         # print(self.GetScore(0), self.GetScore(1))
 
     def ActionUpdate(self, verbosity):
-        control_player = self.control.GetControl()
-        if control_player:
+        if control_player := self.control.GetControl():
             if control_player.GetAction(self) is Action.SHOOT:
                 self.PlayerShot(control_player, False, max(0, verbosity - 1))
             else:

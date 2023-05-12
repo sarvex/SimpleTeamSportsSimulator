@@ -14,10 +14,10 @@ def format_state(game):
         players = [player.name for player in team]
         state['teams'].append(players)
 
-    state['prefixes'] = {}  # Another convenience mapper player name => prefix into data columns
-    for player in game.players:
-        state['prefixes'][player.name] = game.state.GetPlayerFieldPrefix(player)
-
+    state['prefixes'] = {
+        player.name: game.state.GetPlayerFieldPrefix(player)
+        for player in game.players
+    }
     # Scoring probabilities for all the players, computed by the game.
     state['score_prob'] = {}
     for player in game.players:

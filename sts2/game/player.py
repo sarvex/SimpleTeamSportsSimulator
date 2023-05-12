@@ -237,9 +237,8 @@ class SimplePlayer(Player):
                         lowest_net_dist = net_dist
                         if verbosity: print('best pass net dist is', net_dist, self.action)
 
-            if self.GetAction(game) == Action.NONE:
-                if verbosity: print('move towards net')
-
+            if self.GetAction(game) == Action.NONE and verbosity:
+                print('move towards net')
         elif control_player:
             if numpy.random.random() < self.RANDOM_SKATE_CHANCE:
                 self.SetInput(game, numpy.zeros(2))
@@ -247,7 +246,7 @@ class SimplePlayer(Player):
                 if verbosity: print('move up areana')
                 # just move up arena
                 dest = (self.GetAttackingNetPos(game) + self.GetPosition(game)) * 0.5 + center_dir * \
-                       game.arena.arena_size[0] * 0.5
+                           game.arena.arena_size[0] * 0.5
                 input = dest - self.GetPosition(game)
                 self.SetInput(game, input)
             else:
@@ -264,8 +263,7 @@ class SimplePlayer(Player):
                         game) + control_player.GetAttackingNetPos(game)) * 0.5
                 delta = target_pos - self.GetPosition(game)
                 self.SetInput(game, delta)
-        else:
-            if verbosity: print("shouldn't reach here", control_player)
+        elif verbosity: print("shouldn't reach here", control_player)
 
 
 class HumanKeyboardPlayer(Player):
@@ -275,7 +273,7 @@ class HumanKeyboardPlayer(Player):
     def custom_think(self, game, verbosity):
         super(HumanKeyboardPlayer, self).custom_think(game, verbosity)
 
-        i = input(self.name + '> ')
+        i = input(f'{self.name}> ')
         if i == 'exit':
             sys.exit()
 
@@ -336,10 +334,7 @@ class HumanGamepadPlayer(Player):
                     continue
                 delta = teammate.GetPosition(game) - self.GetPosition(game)
                 dist = numpy.linalg.norm(delta)
-                if dist < 0.001:
-                    direction = numpy.array([1.0, 0.0])
-                else:
-                    direction = delta / dist
+                direction = numpy.array([1.0, 0.0]) if dist < 0.001 else delta / dist
                 dot = ls.dot(direction)
                 if dot > best_dot:
                     self.SetAction(game, action)

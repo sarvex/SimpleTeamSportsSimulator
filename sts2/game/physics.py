@@ -58,11 +58,7 @@ class Physics:
                         for player in [player1, player2]:
                             delta = player.GetPosition(self.game) - center
                             dist = numpy.linalg.norm(delta)
-                            if dist > 0.001:
-                                direction = delta / dist
-                            else:
-                                direction = numpy.array([1.0, 0.0])
-
+                            direction = delta / dist if dist > 0.001 else numpy.array([1.0, 0.0])
                             player.SetPosition(self.game,
                                                center + direction * self.game.rules.player_radius * 1.01)
                             player.SetVelocity(self.game, avg_vel)
@@ -114,12 +110,17 @@ class Physics:
 
                 closest_dist = max(0.0,
                                    player_intercept_dist - self.game.rules.player_intercept_speed * intercept_source_dist)
-                if closest_dist > self.game.rules.max_intercept_dist:
-                    prob = 0.0
-                else:
-                    prob = (self.game.rules.max_intercept_chance - self.game.rules.min_intercept_chance) \
-                           * closest_dist / self.game.rules.max_intercept_dist + self.game.rules.min_intercept_chance
-
+                prob = (
+                    0.0
+                    if closest_dist > self.game.rules.max_intercept_dist
+                    else (
+                        self.game.rules.max_intercept_chance
+                        - self.game.rules.min_intercept_chance
+                    )
+                    * closest_dist
+                    / self.game.rules.max_intercept_dist
+                    + self.game.rules.min_intercept_chance
+                )
                 through_chance *= 1.0 - prob
 
                 if closest_dist < shortest_intercept:
@@ -133,18 +134,14 @@ class Physics:
                                 player.name, r, prob), 'closest_dist', closest_dist,
                             'player_intercept_dist', player_intercept_dist, 'intercept_source_dist',
                             intercept_source_dist)
-                    else:
-                        if verbosity: print(
-                            'player %s random %f > probability %f so not intercepted' % (
-                                player.name, r, prob), 'closest_dist', closest_dist,
-                            'player_intercept_dist', player_intercept_dist, 'intercept_source_dist',
-                            intercept_source_dist)
-                else:
-                    if verbosity: print(
-                        'player %s player_intercept_dist %f >= shortest_intercept %f so skipping' % (
-                            player.name, player_intercept_dist, shortest_intercept))
-            else:
-                if verbosity: print('player %s intercept_source_dist %f is behind' % (
-                    player.name, intercept_source_dist))
-
+                    elif verbosity: print(
+                        'player %s random %f > probability %f so not intercepted' % (
+                            player.name, r, prob), 'closest_dist', closest_dist,
+                        'player_intercept_dist', player_intercept_dist, 'intercept_source_dist',
+                        intercept_source_dist)
+                elif verbosity: print(
+                    'player %s player_intercept_dist %f >= shortest_intercept %f so skipping' % (
+                        player.name, player_intercept_dist, shortest_intercept))
+            elif verbosity: print('player %s intercept_source_dist %f is behind' % (
+                player.name, intercept_source_dist))
         return intercepting_player, through_chance

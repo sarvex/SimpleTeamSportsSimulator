@@ -70,8 +70,9 @@ class GamePads:
 
         if not settings.keyboard_only:
             pygame.joystick.init()
-            for i in range(pygame.joystick.get_count()):
-                self.gamepads.append(GamePad(i, settings))
+            self.gamepads.extend(
+                GamePad(i, settings) for i in range(pygame.joystick.get_count())
+            )
         self.gamepads.append(KeyboardController(len(self.gamepads), settings))
 
     def GetGamepad(self, index):
@@ -176,9 +177,7 @@ class KeyboardController(Controller):
     def GetReplaySingleStep(self):
         if self.GetButtonPress(Controller.BUTTON_LB):
             return -1
-        if self.GetButtonPress(Controller.BUTTON_RB):
-            return 1
-        return 0
+        return 1 if self.GetButtonPress(Controller.BUTTON_RB) else 0
 
     def WantsQuit(self):
         self.GetButton(Controller.BUTTON_LB) and self.GetButton(Controller.BUTTON_RB)
@@ -232,9 +231,7 @@ class GamePad(Controller):
     def GetReplaySingleStep(self):
         if self.GetButtonPress(GamePad.BUTTON_LB):
             return -1
-        if self.GetButtonPress(GamePad.BUTTON_RB):
-            return 1
-        return 0
+        return 1 if self.GetButtonPress(GamePad.BUTTON_RB) else 0
 
     def WantsQuit(self):
         self.GetButton(GamePad.BUTTON_LB) and self.GetButton(GamePad.BUTTON_RB)
@@ -389,9 +386,8 @@ class PygameInterface:
             if event.type == pygame.QUIT:
                 self.done = True
 
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    self.done = True
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self.done = True
 
         self._frame = None
         # handle live game or replay
@@ -425,15 +421,14 @@ class PygameInterface:
                 self.pause_frames = -1
         elif self.pause_frames < 0:
             self.pause_frames += 1
-        else:
-            if not self.IsInReplay():
-                if game_state.current_phase in [GamePhase.STOPPAGE_GOAL]:
-                    self.Pause(self.settings.pause_frames)
-                    self.last_was_goal = True
+        elif not self.IsInReplay():
+            if game_state.current_phase in [GamePhase.STOPPAGE_GOAL]:
+                self.Pause(self.settings.pause_frames)
+                self.last_was_goal = True
 
-                elif self.last_was_goal:
-                    self.Pause(self.settings.pause_frames)
-                    self.last_was_goal = False
+            elif self.last_was_goal:
+                self.Pause(self.settings.pause_frames)
+                self.last_was_goal = False
 
     def Draw(self, game_state):
         self.DrawRink(game_state)
@@ -447,7 +442,9 @@ class PygameInterface:
         # 	self.text_print.Print("Tick %d/%d" % (self.game.tick, self.game.rules.max_tick)) # TODO: kernelize
 
         self.text_print.Print("H:%d A:%d" % (game_state.home_score, game_state.away_score))
-        self.text_print.Print("%s -> %s" % (game_state.previous_phase, game_state.current_phase))
+        self.text_print.Print(
+            f"{game_state.previous_phase} -> {game_state.current_phase}"
+        )
         if self.pause_frames:
             self.text_print.Print("Pausing %d" % self.pause_frames)
 
@@ -475,6 +472,7 @@ class PygameInterface:
     def DrawPlayers(self, game_state):
         colours = [pygame.Color('red'), pygame.Color('white')]
 
+        input_scale = 1.0
         # ideally this works without the original player objects, just the series object
 
         for team_side, colour, prefix in zip(TeamSide.TEAMSIDES, colours, ['H', 'A']):
@@ -494,7 +492,6 @@ class PygameInterface:
                 action_time = game_state[
                     team_prefix + str(player_index) + GameState.PLAYER_ACTION_TIME]
 
-                input_scale = 1.0
                 x, z = self.GameCoordToScreenCoord(posx, posz)
                 ix, iz = self.GameCoordToScreenCoord(posx + inputx * input_scale,
                                                      posz + inputz * input_scale)

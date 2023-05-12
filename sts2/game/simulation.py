@@ -49,42 +49,51 @@ class GameEventHistory:
         if source_player_name is not None and e.source_player_name != source_player_name:
             return False
 
-        if target_player_name is not None and e.target_player_name != target_player_name:
-            return False
-
-        return True
+        return target_player_name is None or e.target_player_name == target_player_name
 
     def FindEvents(self, event_type=None, min_tick=None, max_tick=None, source_player_name=None,
                    target_player_name=None):
-        l = []
-        for e in self.event_list:
-            if self.EventMatches(e, event_type, min_tick, max_tick, source_player_name,
-                                 target_player_name):
-                l.append(e)
-
-        return l
+        return [
+            e
+            for e in self.event_list
+            if self.EventMatches(
+                e,
+                event_type,
+                min_tick,
+                max_tick,
+                source_player_name,
+                target_player_name,
+            )
+        ]
 
     def FindMostRecentEvent(self, event_type=None, min_tick=None, max_tick=None,
                             source_player_name=None, target_player_name=None):
-        for e in self.event_list[-1::-1]:
-            if self.EventMatches(e, event_type, min_tick, max_tick, source_player_name,
-                                 target_player_name):
-                return e
-        return None
+        return next(
+            (
+                e
+                for e in self.event_list[-1::-1]
+                if self.EventMatches(
+                    e,
+                    event_type,
+                    min_tick,
+                    max_tick,
+                    source_player_name,
+                    target_player_name,
+                )
+            ),
+            None,
+        )
 
     def EventListToDataFrame(self, l=None):
         if l is None:
             l = self.event_list
 
         df = pandas.DataFrame(columns=['tick', 'event_type', 'source_player', 'target_player'])
-        i = 0
-        for e in l:
+        for i, e in enumerate(l):
             df.loc[i, 'tick'] = e.tick
             df.loc[i, 'event_type'] = e.event_type
             df.loc[i, 'source_player'] = e.source_player_name
             df.loc[i, 'target_player'] = e.target_player_name
-            i += 1
-
         return df
 
 

@@ -28,19 +28,22 @@ class AgentPlayer(SimplePlayer):
 
 def get_game(num_home_players, num_away_players, num_home_agents, num_away_agents,
              timeout_ticks, verbosity=0):
-    # Prepare players
-    home_players = []
-    for i in range(1, num_home_agents + 1):
-        home_players.append(AgentPlayer('h_ai_' + str(i), TeamSide.HOME))
-    for i in range(num_home_agents + 1, num_home_players + 1):
-        home_players.append(SimplePlayer('h_npc_' + str(i), TeamSide.HOME))
-
-    away_players = []
-    for i in range(1, num_away_agents + 1):
-        away_players.append(AgentPlayer('a_ai_' + str(i), TeamSide.AWAY))
-    for i in range(num_away_agents + 1, num_away_players + 1):
-        away_players.append(SimplePlayer('a_npc_' + str(i), TeamSide.AWAY))
-
+    home_players = [
+        AgentPlayer(f'h_ai_{str(i)}', TeamSide.HOME)
+        for i in range(1, num_home_agents + 1)
+    ]
+    home_players.extend(
+        SimplePlayer(f'h_npc_{str(i)}', TeamSide.HOME)
+        for i in range(num_home_agents + 1, num_home_players + 1)
+    )
+    away_players = [
+        AgentPlayer(f'a_ai_{str(i)}', TeamSide.AWAY)
+        for i in range(1, num_away_agents + 1)
+    ]
+    away_players.extend(
+        SimplePlayer(f'a_npc_{str(i)}', TeamSide.AWAY)
+        for i in range(num_away_agents + 1, num_away_players + 1)
+    )
     # Rules
     rules = STANDARD_GAME_RULES
     rules.max_tick = int(timeout_ticks)

@@ -5,11 +5,14 @@ from sts2.environment import STS2Environment
 
 
 def naive_action(obs):
-    action = {}
-    for k, v in obs.items():
-        if isinstance(v, str) and "_ai_" in v:
-            action[v] = {'action': 'NONE', 'input': [random.uniform(-1, 1), random.uniform(-1, 1)]}
-    return action
+    return {
+        v: {
+            'action': 'NONE',
+            'input': [random.uniform(-1, 1), random.uniform(-1, 1)],
+        }
+        for k, v in obs.items()
+        if isinstance(v, str) and "_ai_" in v
+    }
 
 
 if __name__ == "__main__":
